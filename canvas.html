@@ -50,7 +50,7 @@
 							<div class="col-5"><label for="wafer_diameter" class="text_color_default">Wafer Diameter</label></div>
 							<div class="col-7">
 								<div class="input-group">
-									<input type="text" class="form-control rounded-0 border-end-0" name="wafer_diameter" id="wafer_diameter" value="100">
+									<input type="text" class="form-control rounded-0 border-end-0" name="wafer_diameter" id="wafer_diameter" value="300">
 									<span class="input-group-text rounded-0 border-start-0 bg-white text_color_a">mm</span>
 								</div>
 							</div>
@@ -111,53 +111,157 @@
 		$('#die_per_wafer_form').submit();
 	});
 
+	let points = [];
+
 	$(document).on('submit', '#die_per_wafer_form', function (event) {
 		event.preventDefault();
-		let waferDiameter = parseFloat($('#wafer_diameter').val()) * 3.27;
+		let waferDiameter = parseFloat($('#wafer_diameter').val());
+		let waferRadius = waferDiameter / 2;
+		let dieWidth = parseFloat($('#die_width').val());
+		let dieHeight = parseFloat($('#die_height').val());
 
 
 		$('#wafer_image').empty().append(`
-		    <canvas id="wafer" class="img-fluid" width="` + waferDiameter + `" height="` + (waferDiameter + 25) + `" style="background-color:#ffffff;"></canvas>
+		    <canvas id="wafer" class="img-fluid" width="` + waferDiameter + `" height="` + (waferDiameter + 25) + `" style="background-color:#fff;"></canvas>
 		`);
 
 		const canvas = document.getElementById('wafer');
 		if (canvas.getContext) {
 			const ctx = canvas.getContext('2d');
 			let logo = document.getElementById("logo");
-			ctx.drawImage(logo, (waferDiameter / 2) - 50, waferDiameter + 5);
+
+			ctx.drawImage(logo, waferRadius - 50, waferDiameter + 5);
 
 			// Circle
-			const r = canvas.width/2,
-					angle = 45*(Math.PI/180),
-					g = Math.sin(angle)*r;
 
-			drawCircle(canvas.width, r);
 
-			function drawCircle(diameter, radius){
+			drawCircle(waferRadius);
+
+			function drawCircle(radius){
 				ctx.beginPath();
-				ctx.arc(diameter/2, diameter/2, radius, 0, 2 * Math.PI, false);
-				ctx.fillStyle = '#efefef';
+				ctx.arc(radius, radius, radius, 0, 2 * Math.PI, false);
+				ctx.fillStyle = '#fdfdfd';
 				ctx.fill();
 				ctx.lineWidth = 1;
-				ctx.strokeStyle = '#c1c1c1';
+				ctx.strokeStyle = '#ccc';
 				ctx.stroke();
 			}
 
-			// Square
-			const squareWidth = Math.sqrt(2 * r**2),
-					startX = (canvas.width - squareWidth) / 2,
-					startY = startX;
 
-			drawSquare(startX, startY, squareWidth);
 
-			function drawSquare(x, y, width){
-				ctx.beginPath();
-				ctx.rect(x, y, width, width)
-				ctx.stroke();
+			let dpw = Math.ceil((waferDiameter * Math.PI) * (waferDiameter / (4 * (dieWidth * dieHeight)) - 1 / Math.sqrt(2 * (dieWidth * dieHeight))));
+
+			console.log(dpw)
+
+
+			let grd = ctx.createLinearGradient(0, 0, 200, 0);
+			grd.addColorStop(0, "rgba(255, 125, 125, 1)");
+			grd.addColorStop(1, "rgba(125, 125, 255, 1)");
+
+			let count = 0;
+			let x;
+			let y = waferRadius - (dieWidth / 2);
+
+			for (let j=0; j<=waferDiameter; j=j+dieWidth) {
+				x = j;
+				let circle={x:waferRadius, y:waferRadius, r:waferRadius};
+				let rect={x:x, y:y, w:dieWidth, h:dieHeight};
+				if (count < dpw && RectCircleColliding(circle, rect) === true) {
+					count++;
+					ctx.beginPath();
+					ctx.rect(x, y, dieWidth, dieHeight);
+					ctx.fillStyle = grd;
+					ctx.fill();
+					ctx.lineWidth = 1;
+					ctx.strokeStyle = '#fafafa';
+					ctx.stroke();
+				}
+
 			}
+
+			y = (waferDiameter / 2) - (dieWidth / 2);
+			while(y > 0) {
+				y = y - dieHeight;
+				for (let j=0; j<=waferDiameter; j=j+dieWidth) {
+					x = j;
+					let circle={x:waferRadius, y:waferRadius, r:waferRadius};
+					let rect={x:x, y:y, w:dieWidth, h:dieHeight};
+					if (count < dpw && RectCircleColliding(circle, rect) === true) {
+						count++;
+						ctx.beginPath();
+						ctx.rect(x, y, dieWidth, dieHeight);
+						ctx.fillStyle = grd;
+						ctx.fill();
+						ctx.lineWidth = 1;
+						ctx.strokeStyle = '#fafafa';
+						ctx.stroke();
+					}
+
+				}
+			}
+
+
+			y = (waferDiameter / 2) - (dieWidth / 2);
+			while(y < waferDiameter) {
+				y = y + dieHeight;
+				for (let j=0; j<=waferDiameter; j=j+dieWidth) {
+					x = j;
+					let circle={x:waferRadius, y:waferRadius, r:waferRadius};
+					let rect={x:x, y:y, w:dieWidth, h:dieHeight};
+					if (count < dpw && RectCircleColliding(circle, rect) === true) {
+						count++;
+						ctx.beginPath();
+						ctx.rect(x, y, dieWidth, dieHeight);
+						ctx.fillStyle = grd;
+						ctx.fill();
+						ctx.lineWidth = 1;
+						ctx.strokeStyle = '#fafafa';
+						ctx.stroke();
+					}
+
+
+				}
+			}
+
+
 		}
 
 	});
+
+
+
+	function RectCircleColliding(circle,rect){
+		var distX = Math.abs(circle.x - rect.x-rect.w/2);
+		var distY = Math.abs(circle.y - rect.y-rect.h/2);
+
+		// if (distX > (rect.w/2 + circle.r)) { return false; }
+		// if (distY > (rect.h/2 + circle.r)) { return false; }
+		//
+		// if (distX <= (rect.w/2)) { return true; }
+		// if (distY <= (rect.h/2)) { return true; }
+
+		var dx=distX-rect.w/2;
+		var dy=distY-rect.h/2;
+
+		if (
+				distance(rect.x, rect.y, circle) < circle.r &&
+				distance(rect.x + rect.w, rect.y, circle) < circle.r &&
+				distance(rect.x + rect.w, rect.y + rect.h, circle) < circle.r &&
+				distance(rect.x, rect.y + rect.h, circle) < circle.r
+		) {
+			return true;
+		} else {
+			return false;
+		}
+
+
+		// return (dx*dx+dy*dy<=(circle.r*circle.r));
+	}
+
+	function distance(ptX, ptY, circle) {
+		return Math.hypot(ptX - circle.x, ptY - circle.y);
+	}
+
 </script>
 
 </body>
